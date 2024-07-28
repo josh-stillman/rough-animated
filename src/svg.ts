@@ -18,62 +18,82 @@ export class RoughSVG {
     const g = doc.createElementNS(SVGNS, 'g');
     const precision = drawable.options.fixedDecimalPlaceDigits;
     for (const drawing of sets) {
-      let path = null;
+      const pathArray = [];
+
       switch (drawing.type) {
         case 'path': {
-          path = doc.createElementNS(SVGNS, 'path');
-          path.setAttribute('d', this.opsToPath(drawing, precision));
-          path.setAttribute('stroke', o.stroke);
-          path.setAttribute('stroke-width', o.strokeWidth + '');
-          path.setAttribute('fill', 'none');
-          if (o.strokeLineDash) {
-            path.setAttribute('stroke-dasharray', o.strokeLineDash.join(' ').trim());
-          }
-          if (o.strokeLineDashOffset) {
-            path.setAttribute('stroke-dashoffset', `${o.strokeLineDashOffset}`);
+          const myPaths = this.opsToPath(drawing, precision);
+          for (const myPath of myPaths) {
+            const pathEl = doc.createElementNS(SVGNS, 'path');
+            pathEl.setAttribute('d', myPath);
+            pathEl.setAttribute('stroke', o.stroke);
+            pathEl.setAttribute('stroke-width', o.strokeWidth + '');
+            pathEl.setAttribute('fill', 'none');
+            if (o.strokeLineDash) {
+              pathEl.setAttribute('stroke-dasharray', o.strokeLineDash.join(' ').trim());
+            }
+            if (o.strokeLineDashOffset) {
+              pathEl.setAttribute('stroke-dashoffset', `${o.strokeLineDashOffset}`);
+            }
+            pathArray.push(pathEl);
           }
           break;
         }
         case 'fillPath': {
-          path = doc.createElementNS(SVGNS, 'path');
-          path.setAttribute('d', this.opsToPath(drawing, precision));
-          path.setAttribute('stroke', 'none');
-          path.setAttribute('stroke-width', '0');
-          path.setAttribute('fill', o.fill || '');
-          if (drawable.shape === 'curve' || drawable.shape === 'polygon') {
-            path.setAttribute('fill-rule', 'evenodd');
+          const myFillPaths = this.opsToPath(drawing, precision);
+          for (const myFillPath of myFillPaths) {
+
+            const pathEl = doc.createElementNS(SVGNS, 'path');
+            pathEl.setAttribute('d', myFillPath);
+            pathEl.setAttribute('stroke', 'none');
+            pathEl.setAttribute('stroke-width', '0');
+            pathEl.setAttribute('fill', o.fill || '');
+            if (drawable.shape === 'curve' || drawable.shape === 'polygon') {
+              pathEl.setAttribute('fill-rule', 'evenodd');
+            }
+            pathArray.push(pathEl);
           }
           break;
         }
         case 'fillSketch': {
-          path = this.fillSketch(doc, drawing, o);
+          const fillSketchPaths = this.fillSketch(doc, drawing, o);
+          fillSketchPaths.forEach((f) => pathArray.push(f));
           break;
         }
       }
-      if (path) {
-        g.appendChild(path);
+      if (pathArray.length) {
+        pathArray.forEach((p) => g.appendChild(p));
       }
     }
     return g;
   }
 
-  private fillSketch(doc: Document, drawing: OpSet, o: ResolvedOptions): SVGPathElement {
+  private fillSketch(doc: Document, drawing: OpSet, o: ResolvedOptions): SVGPathElement[] {
     let fweight = o.fillWeight;
     if (fweight < 0) {
       fweight = o.strokeWidth / 2;
     }
-    const path = doc.createElementNS(SVGNS, 'path');
-    path.setAttribute('d', this.opsToPath(drawing, o.fixedDecimalPlaceDigits));
-    path.setAttribute('stroke', o.fill || '');
-    path.setAttribute('stroke-width', fweight + '');
-    path.setAttribute('fill', 'none');
-    if (o.fillLineDash) {
-      path.setAttribute('stroke-dasharray', o.fillLineDash.join(' ').trim());
+
+    const fillSketchPaths = this.opsToPath(drawing, o.fixedDecimalPlaceDigits);
+
+    const returnPaths = [];
+
+    for (const myFillSketchPath of fillSketchPaths) {
+      const path = doc.createElementNS(SVGNS, 'path');
+      path.setAttribute('d', myFillSketchPath);
+      path.setAttribute('stroke', o.fill || '');
+      path.setAttribute('stroke-width', fweight + '');
+      path.setAttribute('fill', 'none');
+      if (o.fillLineDash) {
+        path.setAttribute('stroke-dasharray', o.fillLineDash.join(' ').trim());
+      }
+      if (o.fillLineDashOffset) {
+        path.setAttribute('stroke-dashoffset', `${o.fillLineDashOffset}`);
+      }
+      returnPaths.push(path);
     }
-    if (o.fillLineDashOffset) {
-      path.setAttribute('stroke-dashoffset', `${o.fillLineDashOffset}`);
-    }
-    return path;
+
+    return returnPaths;
   }
 
   get generator(): RoughGenerator {
@@ -84,7 +104,7 @@ export class RoughSVG {
     return this.gen.defaultOptions;
   }
 
-  opsToPath(drawing: OpSet, fixedDecimalPlaceDigits?: number): string {
+  opsToPath(drawing: OpSet, fixedDecimalPlaceDigits?: number): string[] {
     return this.gen.opsToPath(drawing, fixedDecimalPlaceDigits);
   }
 
