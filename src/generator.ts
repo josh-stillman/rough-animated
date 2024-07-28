@@ -262,46 +262,45 @@ export class RoughGenerator {
     const o = drawable.options || this.defaultOptions;
     const paths: PathInfo[] = [];
     for (const drawing of sets) {
-      let path: PathInfo | null = null;
       switch (drawing.type) {
         case 'path':
-          path = {
-            d: this.opsToPath(drawing),
+          this.opsToPath(drawing).forEach((p) => paths.push({
+            d: p,
             stroke: o.stroke,
             strokeWidth: o.strokeWidth,
             fill: NOS,
-          };
+          }));
+
           break;
         case 'fillPath':
-          path = {
-            d: this.opsToPath(drawing),
+          this.opsToPath(drawing).forEach((fp) => paths.push({
+            d: fp,
             stroke: NOS,
             strokeWidth: 0,
             fill: o.fill || NOS,
-          };
+          }));
+
           break;
         case 'fillSketch':
-          path = this.fillSketch(drawing, o);
+          this.fillSketch(drawing, o).forEach((fsp) => paths.push(fsp));
           break;
-      }
-      if (path) {
-        paths.push(path);
       }
     }
     return paths;
   }
 
-  private fillSketch(drawing: OpSet, o: ResolvedOptions): PathInfo {
+  private fillSketch(drawing: OpSet, o: ResolvedOptions): PathInfo[] {
     let fweight = o.fillWeight;
     if (fweight < 0) {
       fweight = o.strokeWidth / 2;
     }
-    return {
-      d: this.opsToPath(drawing),
+
+    return this.opsToPath(drawing).map((fp) => ({
+      d: fp,
       stroke: o.fill || NOS,
       strokeWidth: fweight,
       fill: NOS,
-    };
+    }));
   }
 
   private _mergedShape(input: Op[]): Op[] {
