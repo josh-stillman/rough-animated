@@ -231,12 +231,16 @@ export class RoughGenerator {
     return this._d('path', paths, o);
   }
 
-  opsToPath(drawing: OpSet, fixedDecimals?: number): string {
+  opsToPath(drawing: OpSet, fixedDecimals?: number): string[] {
+    const paths: string[] = [];
     let path = '';
     for (const item of drawing.ops) {
       const data = ((typeof fixedDecimals === 'number') && fixedDecimals >= 0) ? (item.data.map((d) => +d.toFixed(fixedDecimals))) : item.data;
       switch (item.op) {
         case 'move':
+          if (path.trim()) {
+            paths.push(path.trim());
+          }
           path += `M${data[0]} ${data[1]} `;
           break;
         case 'bcurveTo':
@@ -247,7 +251,10 @@ export class RoughGenerator {
           break;
       }
     }
-    return path.trim();
+    if (path.trim()) {
+      paths.push(path.trim());
+    }
+    return paths;
   }
 
   toPaths(drawable: Drawable): PathInfo[] {
