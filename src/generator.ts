@@ -241,7 +241,7 @@ export class RoughGenerator {
           if (path.trim()) {
             paths.push(path.trim());
           }
-          path += `M${data[0]} ${data[1]} `;
+          path = `M${data[0]} ${data[1]} `;
           break;
         case 'bcurveTo':
           path += `C${data[0]} ${data[1]}, ${data[2]} ${data[3]}, ${data[4]} ${data[5]} `;
