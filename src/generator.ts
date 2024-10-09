@@ -12,6 +12,7 @@ export class RoughGenerator {
   private config: Config;
 
   defaultOptions: ResolvedOptions = {
+    animate: false,
     maxRandomnessOffset: 2,
     roughness: 1,
     bowing: 1,
