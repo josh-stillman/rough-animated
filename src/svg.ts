@@ -18,7 +18,7 @@ export class RoughSVG {
     const g = doc.createElementNS(SVGNS, 'g');
     const precision = drawable.options.fixedDecimalPlaceDigits;
     for (const drawing of sets) {
-      const pathArray = [];
+      let pathArray: SVGPathElement[] = [];
 
       switch (drawing.type) {
         case 'path': {
@@ -37,6 +37,16 @@ export class RoughSVG {
             }
             pathArray.push(pathEl);
           }
+
+          // TODO: make this part of options.
+          const animationDuration = 1500;
+
+          const animationGroupDelay = 0;
+
+          if (o.animate) {
+            pathArray = this.animatePaths({ input: pathArray, animationDuration, animationGroupDelay });
+          }
+
           break;
         }
         case 'fillPath': {
@@ -76,7 +86,7 @@ export class RoughSVG {
 
     const fillSketchPaths = this.opsToPath(drawing, o.fixedDecimalPlaceDigits);
 
-    const returnPaths = [];
+    let returnPaths: SVGPathElement[] = [];
 
     for (const myFillSketchPath of fillSketchPaths) {
       const path = doc.createElementNS(SVGNS, 'path');
@@ -84,16 +94,60 @@ export class RoughSVG {
       path.setAttribute('stroke', o.fill || '');
       path.setAttribute('stroke-width', fweight + '');
       path.setAttribute('fill', 'none');
-      if (o.fillLineDash) {
-        path.setAttribute('stroke-dasharray', o.fillLineDash.join(' ').trim());
+
+      // Animation needs control over these css properties
+      if (!o.animate) {
+        if (o.fillLineDash) {
+          path.setAttribute('stroke-dasharray', o.fillLineDash.join(' ').trim());
+        }
+        if (o.fillLineDashOffset) {
+          path.setAttribute('stroke-dashoffset', `${o.fillLineDashOffset}`);
+        }
       }
-      if (o.fillLineDashOffset) {
-        path.setAttribute('stroke-dashoffset', `${o.fillLineDashOffset}`);
-      }
+
       returnPaths.push(path);
     }
 
+    const animationDuration = 3000;
+
+    const animationGroupDelay = 1500; // TODO: this needs to be computed from passed in prop
+
+    if (o.animate) {
+      returnPaths = this.animatePaths({ input: returnPaths, animationDuration, animationGroupDelay, toggleDirection: true, useProportionalDuration: false });
+    }
+
     return returnPaths;
+  }
+
+  animatePaths({ input, animationDuration, animationGroupDelay, toggleDirection = false, useProportionalDuration = true }: { input: SVGPathElement[]; animationDuration: number; animationGroupDelay: number; toggleDirection?: boolean; useProportionalDuration?: boolean; }): SVGPathElement[] {
+    const animatedPaths = [...input];
+    // TODO: need offset for fills
+
+    const totalLength = animatedPaths.reduce((acc, el) => acc += el.getTotalLength(), 0);
+    let durationOffset = 0;
+
+    for (let i = 0; i < animatedPaths.length; i++) {
+      const path = animatedPaths[i];
+
+      // create dash to cover path
+      const length = path.getTotalLength();
+      path.style.strokeDashoffset = `${length * (toggleDirection && (i % 2 !== 0) ? -1 : 1)}`;
+      path.style.strokeDasharray = `${length}`;
+
+      // calculate duration of path animation
+      const proportionalDuration = totalLength ? (animationDuration * (length / totalLength)) : 0;
+      const equalDuration = animationDuration / animatedPaths.length;
+      const duration = useProportionalDuration ? proportionalDuration : equalDuration;
+
+      // caclulate path animation delay
+      const delay = animationGroupDelay + durationOffset;
+
+      path.style.animation = `rough-animated ${duration}ms ease-out ${delay}ms forwards`;
+
+      durationOffset += duration;
+    }
+
+    return animatedPaths;
   }
 
   get generator(): RoughGenerator {
