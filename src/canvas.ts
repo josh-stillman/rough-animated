@@ -8,6 +8,11 @@ export class RoughCanvas {
   private ctx: CanvasRenderingContext2D;
 
   constructor(canvas: HTMLCanvasElement, config?: Config) {
+    if (config?.options?.animate) {
+      console.error('Animation is only supported in SVG renderer.');
+      delete config.options.animate;
+    }
+
     this.canvas = canvas;
     this.ctx = this.canvas.getContext('2d')!;
     this.gen = new RoughGenerator(config);

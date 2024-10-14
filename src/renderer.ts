@@ -32,7 +32,25 @@ export function linearPath(points: Point[], close: boolean, o: ResolvedOptions):
     if (close) {
       ops.push(..._doubleLine(points[len - 1][0], points[len - 1][1], points[0][0], points[0][1], o));
     }
-    return { type: 'path', ops };
+
+    let animatedOps: Op[] = [];
+    if (o.animate) {
+      // reorder path line pairs for tracing shape twice during animation
+      const firstOutline = [];
+      const secondOutline = [];
+
+      for (let i = 2; i < ops.length - 1; i += 4) {
+        secondOutline.push(...[ops[i], ops[i+1]]);
+      }
+
+      for (let i = 0; i < ops.length - 3; i += 4) {
+        firstOutline.push(...[ops[i], ops[i+1]]);
+      }
+
+      animatedOps = [...firstOutline, ...secondOutline];
+    }
+
+    return { type: 'path', ops: o.animate ? animatedOps : ops };
   } else if (len === 2) {
     return line(points[0][0], points[0][1], points[1][0], points[1][1], o);
   }
