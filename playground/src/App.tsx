@@ -16,7 +16,8 @@ function App() {
   const [fillStyle, setFillStyle] = useState('hachure');
   const [hachureGap, setHachureGap] = useState(5);
 
-  const [duration, setDuration] = useState(1500);
+  const [animationDuration, setAnimationDuration] = useState(4000);
+  const [animationDurationFillPercentage, setAnimationDurationFillPercentage] = useState(.7);
 
   useEffect(() => {
     resetShape();
@@ -29,7 +30,8 @@ function App() {
 
 
     const rc = rough.svg(svgRef.current!);
-    svgRef.current!.replaceChildren(rc.rectangle(10, 10, width, height, { fill: fillColor, hachureGap, animate: true, fillStyle }));
+    svgRef.current!.replaceChildren(rc.rectangle(10, 10, width, height, { fill: fillColor, hachureGap, animate: true, animationDuration, fillStyle, animationDurationFillPercentage }));
+    svgRef.current!.appendChild(rc.circle(width * 1.7, height * .6, width, { fill: fillColor, hachureGap, animate: true, animationDuration, fillStyle, animationDelay: animationDuration, animationDurationFillPercentage }));
   };
 
   return (
@@ -122,8 +124,20 @@ function App() {
                     shrink: true,
                   },
                 }}
-                value={duration}
-                onChange={(e) => setDuration(+e.target.value)}
+                value={animationDuration}
+                onChange={(e) => setAnimationDuration(+e.target.value)}
+              />
+              <TextField
+                id="outlined-number"
+                label="fill duration percentage"
+                type="number"
+                slotProps={{
+                  inputLabel: {
+                    shrink: true,
+                  },
+                }}
+                value={animationDurationFillPercentage}
+                onChange={(e) => setAnimationDurationFillPercentage(+e.target.value)}
               />
             </div>
 
