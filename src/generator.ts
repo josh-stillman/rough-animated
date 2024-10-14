@@ -13,6 +13,9 @@ export class RoughGenerator {
 
   defaultOptions: ResolvedOptions = {
     animate: false,
+    animationDuration: 4000,
+    animationDurationFillPercentage: .6,
+    animationDelay: 0,
     maxRandomnessOffset: 2,
     roughness: 1,
     bowing: 1,

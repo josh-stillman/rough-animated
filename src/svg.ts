@@ -38,13 +38,12 @@ export class RoughSVG {
             pathArray.push(pathEl);
           }
 
-          // TODO: make this part of options.
-          const animationDuration = 1500;
-
-          const animationGroupDelay = 0;
-
           if (o.animate) {
-            pathArray = this.animatePaths({ input: pathArray, animationDuration, animationGroupDelay });
+            const { animationDuration, animationDelay, animationDurationFillPercentage } = o;
+
+            const animationSegmentDuration = animationDuration * (1 - animationDurationFillPercentage);
+
+            pathArray = this.animatePaths({ input: pathArray, animationSegmentDuration: animationSegmentDuration, animationSegmentDelay: animationDelay, animationDurationFillPercentage });
           }
 
           break;
@@ -108,18 +107,19 @@ export class RoughSVG {
       returnPaths.push(path);
     }
 
-    const animationDuration = 3000;
-
-    const animationGroupDelay = 1500; // TODO: this needs to be computed from passed in prop
-
     if (o.animate) {
-      returnPaths = this.animatePaths({ input: returnPaths, animationDuration, animationGroupDelay, toggleDirection: true, useProportionalDuration: false });
+      const { animationDuration, animationDelay, animationDurationFillPercentage } = o;
+
+      const animationSegmentDuration = animationDuration * animationDurationFillPercentage;
+      const fillSketchDelay = animationDelay + (animationDuration * (1 - animationDurationFillPercentage));
+
+      returnPaths = this.animatePaths({ input: returnPaths, animationSegmentDuration, animationSegmentDelay: fillSketchDelay, toggleDirection: true, useProportionalDuration: false });
     }
 
     return returnPaths;
   }
 
-  animatePaths({ input, animationDuration, animationGroupDelay, toggleDirection = false, useProportionalDuration = true }: { input: SVGPathElement[]; animationDuration: number; animationGroupDelay: number; toggleDirection?: boolean; useProportionalDuration?: boolean; }): SVGPathElement[] {
+  animatePaths({ input, animationSegmentDuration, animationSegmentDelay, toggleDirection = false, useProportionalDuration = true }: { input: SVGPathElement[]; animationSegmentDuration: number; animationSegmentDelay: number; toggleDirection?: boolean; useProportionalDuration?: boolean; }): SVGPathElement[] {
     const animatedPaths = [...input];
     // TODO: need offset for fills
 
@@ -135,12 +135,12 @@ export class RoughSVG {
       path.style.strokeDasharray = `${length}`;
 
       // calculate duration of path animation
-      const proportionalDuration = totalLength ? (animationDuration * (length / totalLength)) : 0;
-      const equalDuration = animationDuration / animatedPaths.length;
+      const proportionalDuration = totalLength ? (animationSegmentDuration * (length / totalLength)) : 0;
+      const equalDuration = animationSegmentDuration / animatedPaths.length;
       const duration = useProportionalDuration ? proportionalDuration : equalDuration;
 
       // caclulate path animation delay
-      const delay = animationGroupDelay + durationOffset;
+      const delay = animationSegmentDelay + durationOffset;
 
       path.style.animation = `rough-animated ${duration}ms ease-out ${delay}ms forwards`;
 
