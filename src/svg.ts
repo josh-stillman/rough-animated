@@ -18,7 +18,7 @@ export class RoughSVG {
     const g = doc.createElementNS(SVGNS, 'g');
     const precision = drawable.options.fixedDecimalPlaceDigits;
     for (const drawing of sets) {
-      let pathArray: SVGPathElement[] = [];
+      let pathArray: (SVGPathElement | SVGDefsElement)[] = [];
 
       switch (drawing.type) {
         case 'path': {
@@ -50,17 +50,95 @@ export class RoughSVG {
         }
         case 'fillPath': {
           const myFillPaths = this.opsToPath(drawing, precision);
+          const pathArrayLengthBefore = pathArray.length;
           for (const myFillPath of myFillPaths) {
+
+            if (o.animate) {
+              const defsEl = doc.createElementNS(SVGNS, 'defs');
+
+              const gradientEl = doc.createElementNS(SVGNS, 'linearGradient');
+              gradientEl.id = 'fill-animation';
+              gradientEl.setAttributeNS(null, 'x1', '0%');
+              gradientEl.setAttributeNS(null, 'x2', '100%');
+              gradientEl.setAttributeNS(null, 'y1', '100%');
+              gradientEl.setAttributeNS(null, 'y2', '0%');
+
+              // fill color
+              const firstStopEl = doc.createElementNS(SVGNS, 'stop');
+              firstStopEl.style.stopColor = o.fill || '';
+              firstStopEl.setAttributeNS(null, 'offset', '0');
+
+              // transparency
+              const secondStopEl = doc.createElementNS(SVGNS, 'stop');
+              secondStopEl.style.stopColor = 'rgba(255,255,255,0)';
+              secondStopEl.setAttributeNS(null, 'offset', '0');
+
+              // animation
+              const animationEl = doc.createElementNS(SVGNS, 'animate');
+              animationEl.setAttributeNS(null, 'attributeName', 'offset');
+              animationEl.setAttributeNS(null, 'begin', '0s');
+              animationEl.setAttributeNS(null, 'dur', '2s');
+              animationEl.setAttributeNS(null, 'from', '0');
+              animationEl.setAttributeNS(null, 'to', '1');
+
+              firstStopEl.appendChild(animationEl);
+              secondStopEl.appendChild(animationEl.cloneNode());
+
+
+
+              gradientEl.appendChild(firstStopEl);
+              gradientEl.appendChild(secondStopEl);
+              defsEl.appendChild(gradientEl);
+
+              console.log({gradientEl});
+
+              pathArray.push(defsEl);
+            }
 
             const pathEl = doc.createElementNS(SVGNS, 'path');
             pathEl.setAttribute('d', myFillPath);
             pathEl.setAttribute('stroke', 'none');
             pathEl.setAttribute('stroke-width', '0');
-            pathEl.setAttribute('fill', o.fill || '');
+            // pathEl.setAttribute('fill', 'linear-gradient(to right, rgba(255,0,0,0), rgba(255,0,0,1))');
+            if (!o.animate) {
+              pathEl.setAttribute('fill', o.fill || '');
+            }
+
+            if (o.animate) {
+              pathEl.setAttribute('fill', 'url(#fill-animation)');
+            }
+
+            // fill becomes a linear gradient, transparent/white and the other is the fill.
+            //
             if (drawable.shape === 'curve' || drawable.shape === 'polygon') {
               pathEl.setAttribute('fill-rule', 'evenodd');
             }
             pathArray.push(pathEl);
+          }
+          console.log('here in fill path');
+
+          // const animate = true;
+          // const animationDuration = 1500;
+          // const totalLength = pathArray.reduce((acc, el) => acc + el.getTotalLength(), 0);
+
+          // const animationGroupDelay = 0;
+
+          if (o.animate) {
+
+            // this.animatePaths({input: pathArray, animationDuration, animationGroupDelay});
+            // let durationOffset = 0;
+
+            // for (let i = pathArrayLengthBefore; i < pathArray.length; i++) {
+            //   const path = pathArray[i];
+            //   const length = path.getTotalLength();
+            //   const duration = totalLength ? (animationDuration * (length / totalLength)) : 0;
+            //   const delay = animationGroupDelay + durationOffset;
+            //   const style = path.style;
+            //   style.strokeDashoffset = `${length}`;
+            //   style.strokeDasharray = `${length}`;
+            //   style.animation = `rough-animated ${duration}ms ease-out ${delay}ms forwards`;
+            //   durationOffset += duration;
+            // }
           }
           break;
         }
