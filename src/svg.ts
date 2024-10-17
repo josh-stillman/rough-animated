@@ -43,7 +43,7 @@ export class RoughSVG {
 
             const animationSegmentDuration = animationDuration * (1 - animationDurationFillPercentage);
 
-            pathArray = this.animatePaths({ input: pathArray, animationSegmentDuration: animationSegmentDuration, animationSegmentDelay: animationDelay, animationDurationFillPercentage });
+            pathArray = this.animatePaths({ input: pathArray, animationSegmentDuration: animationSegmentDuration, animationSegmentDelay: animationDelay });
           }
 
           break;
