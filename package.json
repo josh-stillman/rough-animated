@@ -5,8 +5,13 @@
   "main": "bundled/rough.cjs.js",
   "module": "bundled/rough.esm.js",
   "types": "bin/rough.d.ts",
+  "files": [
+    "bundled",
+    "bin"
+  ],
   "scripts": {
     "build": "rm -rf bin && tsc && rollup -c",
+    "prepare": "npm run build",
     "lint": "eslint --ext ts src",
     "test": "echo \"Error: no test specified\" && exit 1",
     "playground:dev": "vite playground",
