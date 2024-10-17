@@ -4,20 +4,24 @@ import { useEffect, useRef, useState } from 'react';
 
 import './App.css';
 import rough from '../../src/rough';
-import { Box, Button, FormControl, InputLabel, MenuItem, Select, TextField } from '@mui/material';
+import { Box, Button, Checkbox, FormControl, FormControlLabel, InputLabel, MenuItem, Select, TextField } from '@mui/material';
 import React from 'react';
+import { useSearchParams } from 'react-router-dom';
 function App() {
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const [width, setWidth] = useState(100);
-  const [height, setHeight] = useState(100);
-  const [fillColor, setFillColor] = useState('#0000FF');
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [fillStyle, setFillStyle] = useState('hachure');
-  const [hachureGap, setHachureGap] = useState(5);
+  const [width, setWidth] = useState(searchParams.get('width') ? parseInt(searchParams.get('width') as string) : 300);
+  const [height, setHeight] = useState(searchParams.get('height') ? parseInt(searchParams.get('height') as string) : 300);
+  const [fillColor, setFillColor] = useState(searchParams.get('fillColor') || '#0000FF');
 
-  const [animationDuration, setAnimationDuration] = useState(4000);
-  const [animationDurationFillPercentage, setAnimationDurationFillPercentage] = useState(.7);
+  const [fillStyle, setFillStyle] = useState(searchParams.get('fillStyle') || 'hachure');
+  const [hachureGap, setHachureGap] = useState(searchParams.get('hachureGap') ? parseInt(searchParams.get('hachureGap') as string) : 5);
+
+  const [animate, setAnimate] = useState(searchParams.get('animate') ? searchParams.get('animate') === 'true' : true);
+  const [animationDuration, setAnimationDuration] = useState(searchParams.get('duration') ? parseInt(searchParams.get('duration') as string) : 4000);
+  const [fillDuration, setFillDuration] = useState(searchParams.get('fillDuration') ? parseFloat(searchParams.get('fillDuration') as string) : .7);
 
   useEffect(() => {
     resetShape();
@@ -28,10 +32,20 @@ function App() {
       return;
     }
 
-
     const rc = rough.svg(svgRef.current!);
-    svgRef.current!.replaceChildren(rc.rectangle(10, 10, width, height, { fill: fillColor, hachureGap, animate: true, animationDuration, fillStyle, animationDurationFillPercentage }));
-    svgRef.current!.appendChild(rc.circle(width * 1.7, height * .6, width, { fill: fillColor, hachureGap, animate: true, animationDuration, fillStyle, animationDelay: animationDuration, animationDurationFillPercentage }));
+    svgRef.current!.replaceChildren(rc.rectangle(10, 10, width, height, { fill: fillColor, hachureGap, animate, animationDuration, fillStyle, animationDurationFillPercentage: fillDuration }));
+    svgRef.current!.appendChild(rc.circle(width * 1.7, height * .6, width, { fill: fillColor, hachureGap, animate, animationDuration, fillStyle, animationDelay: animationDuration, animationDurationFillPercentage: fillDuration }));
+
+    setSearchParams({
+      animate: `${animate}`,
+      animationDuration: `${animationDuration}`,
+      fillDuration: `${fillDuration}`,
+      fillStyle,
+      fillColor,
+      hachureGap: `${hachureGap}`,
+      width: `${width}`,
+      height: `${height}`,
+    });
   };
 
   return (
@@ -136,9 +150,16 @@ function App() {
                     shrink: true,
                   },
                 }}
-                value={animationDurationFillPercentage}
-                onChange={(e) => setAnimationDurationFillPercentage(+e.target.value)}
+                value={fillDuration}
+                onChange={(e) => setFillDuration(+e.target.value)}
               />
+              <FormControlLabel control={
+                <Checkbox
+                  checked={animate}
+                  onChange={(e) => setAnimate(e.target.checked)}
+                />}
+              label="animate" />
+
             </div>
 
 
