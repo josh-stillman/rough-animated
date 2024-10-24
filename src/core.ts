@@ -13,6 +13,10 @@ export interface DrawingSurface {
 }
 
 export interface Options {
+  animate?: boolean;
+  animationDuration?: number;
+  animationDurationFillPercentage?: number;
+  animationDelay?: number;
   maxRandomnessOffset?: number;
   roughness?: number;
   bowing?: number;
@@ -43,6 +47,10 @@ export interface Options {
 }
 
 export interface ResolvedOptions extends Options {
+  animate: boolean;
+  animationDuration: number;
+  animationDurationFillPercentage: number;
+  animationDelay: number;
   maxRandomnessOffset: number;
   roughness: number;
   bowing: number;

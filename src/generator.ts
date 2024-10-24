@@ -12,6 +12,10 @@ export class RoughGenerator {
   private config: Config;
 
   defaultOptions: ResolvedOptions = {
+    animate: false,
+    animationDuration: 4000,
+    animationDurationFillPercentage: .6,
+    animationDelay: 0,
     maxRandomnessOffset: 2,
     roughness: 1,
     bowing: 1,
@@ -231,13 +235,17 @@ export class RoughGenerator {
     return this._d('path', paths, o);
   }
 
-  opsToPath(drawing: OpSet, fixedDecimals?: number): string {
+  opsToPath(drawing: OpSet, fixedDecimals?: number): string[] {
+    const paths: string[] = [];
     let path = '';
     for (const item of drawing.ops) {
       const data = ((typeof fixedDecimals === 'number') && fixedDecimals >= 0) ? (item.data.map((d) => +d.toFixed(fixedDecimals))) : item.data;
       switch (item.op) {
         case 'move':
-          path += `M${data[0]} ${data[1]} `;
+          if (path.trim()) {
+            paths.push(path.trim());
+          }
+          path = `M${data[0]} ${data[1]} `;
           break;
         case 'bcurveTo':
           path += `C${data[0]} ${data[1]}, ${data[2]} ${data[3]}, ${data[4]} ${data[5]} `;
@@ -247,7 +255,10 @@ export class RoughGenerator {
           break;
       }
     }
-    return path.trim();
+    if (path.trim()) {
+      paths.push(path.trim());
+    }
+    return paths;
   }
 
   toPaths(drawable: Drawable): PathInfo[] {
@@ -255,46 +266,45 @@ export class RoughGenerator {
     const o = drawable.options || this.defaultOptions;
     const paths: PathInfo[] = [];
     for (const drawing of sets) {
-      let path: PathInfo | null = null;
       switch (drawing.type) {
         case 'path':
-          path = {
-            d: this.opsToPath(drawing),
+          this.opsToPath(drawing).forEach((p) => paths.push({
+            d: p,
             stroke: o.stroke,
             strokeWidth: o.strokeWidth,
             fill: NOS,
-          };
+          }));
+
           break;
         case 'fillPath':
-          path = {
-            d: this.opsToPath(drawing),
+          this.opsToPath(drawing).forEach((fp) => paths.push({
+            d: fp,
             stroke: NOS,
             strokeWidth: 0,
             fill: o.fill || NOS,
-          };
+          }));
+
           break;
         case 'fillSketch':
-          path = this.fillSketch(drawing, o);
+          this.fillSketch(drawing, o).forEach((fsp) => paths.push(fsp));
           break;
-      }
-      if (path) {
-        paths.push(path);
       }
     }
     return paths;
   }
 
-  private fillSketch(drawing: OpSet, o: ResolvedOptions): PathInfo {
+  private fillSketch(drawing: OpSet, o: ResolvedOptions): PathInfo[] {
     let fweight = o.fillWeight;
     if (fweight < 0) {
       fweight = o.strokeWidth / 2;
     }
-    return {
-      d: this.opsToPath(drawing),
+
+    return this.opsToPath(drawing).map((fp) => ({
+      d: fp,
       stroke: o.fill || NOS,
       strokeWidth: fweight,
       fill: NOS,
-    };
+    }));
   }
 
   private _mergedShape(input: Op[]): Op[] {

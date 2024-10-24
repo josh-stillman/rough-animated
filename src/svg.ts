@@ -18,62 +18,136 @@ export class RoughSVG {
     const g = doc.createElementNS(SVGNS, 'g');
     const precision = drawable.options.fixedDecimalPlaceDigits;
     for (const drawing of sets) {
-      let path = null;
+      let pathArray: SVGPathElement[] = [];
+
       switch (drawing.type) {
         case 'path': {
-          path = doc.createElementNS(SVGNS, 'path');
-          path.setAttribute('d', this.opsToPath(drawing, precision));
-          path.setAttribute('stroke', o.stroke);
-          path.setAttribute('stroke-width', o.strokeWidth + '');
-          path.setAttribute('fill', 'none');
-          if (o.strokeLineDash) {
-            path.setAttribute('stroke-dasharray', o.strokeLineDash.join(' ').trim());
+          const myPaths = this.opsToPath(drawing, precision);
+          for (const myPath of myPaths) {
+            const pathEl = doc.createElementNS(SVGNS, 'path');
+            pathEl.setAttribute('d', myPath);
+            pathEl.setAttribute('stroke', o.stroke);
+            pathEl.setAttribute('stroke-width', o.strokeWidth + '');
+            pathEl.setAttribute('fill', 'none');
+            if (o.strokeLineDash) {
+              pathEl.setAttribute('stroke-dasharray', o.strokeLineDash.join(' ').trim());
+            }
+            if (o.strokeLineDashOffset) {
+              pathEl.setAttribute('stroke-dashoffset', `${o.strokeLineDashOffset}`);
+            }
+            pathArray.push(pathEl);
           }
-          if (o.strokeLineDashOffset) {
-            path.setAttribute('stroke-dashoffset', `${o.strokeLineDashOffset}`);
+
+          if (o.animate) {
+            const { animationDuration, animationDelay, animationDurationFillPercentage } = o;
+
+            const animationSegmentDuration = animationDuration * (1 - animationDurationFillPercentage);
+
+            pathArray = this.animatePaths({ input: pathArray, animationSegmentDuration: animationSegmentDuration, animationSegmentDelay: animationDelay });
           }
+
           break;
         }
         case 'fillPath': {
-          path = doc.createElementNS(SVGNS, 'path');
-          path.setAttribute('d', this.opsToPath(drawing, precision));
-          path.setAttribute('stroke', 'none');
-          path.setAttribute('stroke-width', '0');
-          path.setAttribute('fill', o.fill || '');
-          if (drawable.shape === 'curve' || drawable.shape === 'polygon') {
-            path.setAttribute('fill-rule', 'evenodd');
+          const myFillPaths = this.opsToPath(drawing, precision);
+          for (const myFillPath of myFillPaths) {
+
+            const pathEl = doc.createElementNS(SVGNS, 'path');
+            pathEl.setAttribute('d', myFillPath);
+            pathEl.setAttribute('stroke', 'none');
+            pathEl.setAttribute('stroke-width', '0');
+            pathEl.setAttribute('fill', o.fill || '');
+            if (drawable.shape === 'curve' || drawable.shape === 'polygon') {
+              pathEl.setAttribute('fill-rule', 'evenodd');
+            }
+            pathArray.push(pathEl);
           }
           break;
         }
         case 'fillSketch': {
-          path = this.fillSketch(doc, drawing, o);
+          const fillSketchPaths = this.fillSketch(doc, drawing, o);
+          fillSketchPaths.forEach((f) => pathArray.push(f));
           break;
         }
       }
-      if (path) {
-        g.appendChild(path);
+      if (pathArray.length) {
+        pathArray.forEach((p) => g.appendChild(p));
       }
     }
     return g;
   }
 
-  private fillSketch(doc: Document, drawing: OpSet, o: ResolvedOptions): SVGPathElement {
+  private fillSketch(doc: Document, drawing: OpSet, o: ResolvedOptions): SVGPathElement[] {
     let fweight = o.fillWeight;
     if (fweight < 0) {
       fweight = o.strokeWidth / 2;
     }
-    const path = doc.createElementNS(SVGNS, 'path');
-    path.setAttribute('d', this.opsToPath(drawing, o.fixedDecimalPlaceDigits));
-    path.setAttribute('stroke', o.fill || '');
-    path.setAttribute('stroke-width', fweight + '');
-    path.setAttribute('fill', 'none');
-    if (o.fillLineDash) {
-      path.setAttribute('stroke-dasharray', o.fillLineDash.join(' ').trim());
+
+    const fillSketchPaths = this.opsToPath(drawing, o.fixedDecimalPlaceDigits);
+
+    let returnPaths: SVGPathElement[] = [];
+
+    for (const myFillSketchPath of fillSketchPaths) {
+      const path = doc.createElementNS(SVGNS, 'path');
+      path.setAttribute('d', myFillSketchPath);
+      path.setAttribute('stroke', o.fill || '');
+      path.setAttribute('stroke-width', fweight + '');
+      path.setAttribute('fill', 'none');
+
+      // Animation needs control over these css properties
+      if (!o.animate) {
+        if (o.fillLineDash) {
+          path.setAttribute('stroke-dasharray', o.fillLineDash.join(' ').trim());
+        }
+        if (o.fillLineDashOffset) {
+          path.setAttribute('stroke-dashoffset', `${o.fillLineDashOffset}`);
+        }
+      }
+
+      returnPaths.push(path);
     }
-    if (o.fillLineDashOffset) {
-      path.setAttribute('stroke-dashoffset', `${o.fillLineDashOffset}`);
+
+    if (o.animate) {
+      const { animationDuration, animationDelay, animationDurationFillPercentage } = o;
+
+      const animationSegmentDuration = animationDuration * animationDurationFillPercentage;
+      const fillSketchDelay = animationDelay + (animationDuration * (1 - animationDurationFillPercentage));
+
+      returnPaths = this.animatePaths({ input: returnPaths, animationSegmentDuration, animationSegmentDelay: fillSketchDelay, toggleDirection: true, useProportionalDuration: false });
     }
-    return path;
+
+    return returnPaths;
+  }
+
+  animatePaths({ input, animationSegmentDuration, animationSegmentDelay, toggleDirection = false, useProportionalDuration = true }: { input: SVGPathElement[]; animationSegmentDuration: number; animationSegmentDelay: number; toggleDirection?: boolean; useProportionalDuration?: boolean; }): SVGPathElement[] {
+    const animatedPaths = [...input];
+    // TODO: need offset for fills
+
+    const totalLength = animatedPaths.reduce((acc, el) => acc += el.getTotalLength(), 0);
+    let durationOffset = 0;
+
+    for (let i = 0; i < animatedPaths.length; i++) {
+      const path = animatedPaths[i];
+
+      // create dash to cover path
+      const length = path.getTotalLength();
+      path.style.strokeDashoffset = `${length * (toggleDirection && (i % 2 !== 0) ? -1 : 1)}`;
+      path.style.strokeDasharray = `${length}`;
+
+      // calculate duration of path animation
+      const proportionalDuration = totalLength ? (animationSegmentDuration * (length / totalLength)) : 0;
+      const equalDuration = animationSegmentDuration / animatedPaths.length;
+      const duration = useProportionalDuration ? proportionalDuration : equalDuration;
+
+      // caclulate path animation delay
+      const delay = animationSegmentDelay + durationOffset;
+
+      path.style.animation = `rough-animated ${duration}ms ease-out ${delay}ms forwards`;
+
+      durationOffset += duration;
+    }
+
+    return animatedPaths;
   }
 
   get generator(): RoughGenerator {
@@ -84,7 +158,7 @@ export class RoughSVG {
     return this.gen.defaultOptions;
   }
 
-  opsToPath(drawing: OpSet, fixedDecimalPlaceDigits?: number): string {
+  opsToPath(drawing: OpSet, fixedDecimalPlaceDigits?: number): string[] {
     return this.gen.opsToPath(drawing, fixedDecimalPlaceDigits);
   }
 
