@@ -15,12 +15,12 @@
     "lint": "eslint --ext ts src",
     "test": "echo \"Error: no test specified\" && exit 1",
     "playground:dev": "vite playground",
-    "playground:build": "tsc -b && vite build",
-    "playground:preview": "vite preview"
+    "playground:build": "tsc -b && vite build playground",
+    "playground:preview": "vite preview --outDir playground-dist"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pshihn/rough.git"
+    "url": "git+https://github.com/josh-stillman/rough-animated.git"
   },
   "keywords": [
     "canvas",

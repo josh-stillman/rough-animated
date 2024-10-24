@@ -4,6 +4,7 @@ node_modules
 z
 bin
 dist
+playground-dist
 bundled
 bug.html
 
